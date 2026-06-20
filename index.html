@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Code Debugger — by Hanish</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f3ff;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .container { width: 100%; max-width: 720px; }
+
+    .header {
+      background: #534AB7;
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-icon { width: 46px; height: 46px; background: #3C3489; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .header-icon i { font-size: 22px; color: #CECBF6; }
+    .header-title { font-size: 20px; font-weight: 600; color: #EEEDFE; }
+    .header-sub { font-size: 13px; color: #AFA9EC; margin-top: 2px; }
+    .header-badge span { font-size: 11px; color: #AFA9EC; display: block; text-align: right; }
+    .header-badge strong { font-size: 15px; color: #CECBF6; font-weight: 600; }
+
+    .card { background: #fff; border-radius: 14px; border: 1px solid #e0dcf9; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+
+    label { font-size: 13px; color: #555; display: block; margin-bottom: 6px; font-weight: 500; }
+    .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+
+    select, input[type="text"] {
+      width: 100%; padding: 9px 12px;
+      border: 1px solid #c8c2f0; border-radius: 8px;
+      font-size: 14px; background: #f9f8ff; color: #26215C; outline: none;
+    }
+    select:focus, input[type="text"]:focus { border-color: #534AB7; background: #fff; }
+
+    textarea#codeInput {
+      width: 100%; height: 190px;
+      font-family: 'Courier New', monospace; font-size: 13px;
+      padding: 12px; border: 1px solid #c8c2f0; border-radius: 10px;
+      background: #EEEDFE; color: #26215C; resize: vertical; outline: none; line-height: 1.6;
+    }
+    textarea#codeInput:focus { border-color: #534AB7; background: #f5f4ff; }
+
+    .debug-btn {
+      width: 100%; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer;
+      background: #534AB7; color: #fff; border: none; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.2s; margin-top: 1rem;
+    }
+    .debug-btn:hover { background: #3C3489; }
+    .debug-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .loading { display: none; text-align: center; padding: 2rem; color: #534AB7; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading i { font-size: 28px; animation: spin 1s linear infinite; display: block; margin-bottom: 8px; }
+    .loading p { font-size: 14px; color: #777; }
+
+    #result { display: none; margin-top: 1.25rem; }
+    .result-card { border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+
+    .bugs-card { background: #FCEBEB; border: 1px solid #F09595; }
+    .bugs-card .card-head-title { color: #A32D2D; }
+    .bugs-card .card-icon { color: #A32D2D; }
+
+    .fix-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .fix-title { display: flex; align-items: center; gap: 8px; color: #0F6E56; font-weight: 600; font-size: 14px; }
+
+    pre#fixedCode {
+      margin: 0; padding: 1rem;
+      background: #E1F5EE; border: 1px solid #5DCAA5; border-radius: 10px;
+      font-family: 'Courier New', monospace; font-size: 13px; color: #085041;
+      overflow-x: auto; white-space: pre-wrap; word-break: break-word; line-height: 1.6;
+    }
+
+    .explain-card { background: #EEEDFE; border: 1px solid #AFA9EC; }
+    .explain-card .card-head-title { color: #3C3489; }
+    .explain-card .card-icon { color: #534AB7; }
+
+    .card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .card-head-title { font-weight: 600; font-size: 14px; }
+    .card-icon { font-size: 18px; }
+    .card-body { font-size: 14px; color: #333; line-height: 1.75; }
+
+    .copy-btn {
+      font-size: 12px; padding: 5px 12px; display: flex; align-items: center; gap: 4px;
+      cursor: pointer; border: 1px solid #c8c2f0; border-radius: 8px;
+      background: #fff; color: #534AB7; font-weight: 500; transition: background 0.15s;
+    }
+    .copy-btn:hover { background: #EEEDFE; }
+
+    .lang-badge {
+      display: inline-block; background: #EEEDFE; color: #534AB7;
+      font-size: 11px; font-weight: 600; padding: 2px 9px;
+      border-radius: 20px; margin-left: 6px; vertical-align: middle;
+    }
+
+    .reset-btn {
+      width: 100%; padding: 9px; font-size: 14px; cursor: pointer;
+      border: 1px solid #c8c2f0; border-radius: 10px; background: #fff; color: #534AB7;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      margin-top: 0.5rem; font-weight: 500; transition: background 0.15s;
+    }
+    .reset-btn:hover { background: #EEEDFE; }
+
+    .footer {
+      margin-top: 2rem; padding-top: 1rem;
+      border-top: 1px solid #e0dcf9;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .footer span { font-size: 12px; color: #999; }
+    .footer .owner { color: #534AB7; font-weight: 600; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="header-icon"><i class="ti ti-bug"></i></div>
+      <div>
+        <div class="header-title">AI code debugger</div>
+        <div class="header-sub">Paste your code and get instant bug fixes</div>
+      </div>
+    </div>
+    <div class="header-badge">
+      <span>Built by</span>
+      <strong>Hanish</strong>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="controls">
+      <div>
+        <label for="lang">Language</label>
+        <select id="lang">
+          <option value="Python">Python</option>
+          <option value="Java">Java</option>
+          <option value="C++">C++</option>
+          <option value="JavaScript">JavaScript</option>
+          <option value="C">C</option>
+          <option value="SQL">SQL</option>
+        </select>
+      </div>
+      <div>
+        <label for="mode">Debug mode</label>
+        <select id="mode">
+          <option value="full">Find bugs + fix code</option>
+          <option value="explain">Explain errors only</option>
+          <option value="optimize">Fix + optimize</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="codeInput">Paste your code</label>
+    <textarea id="codeInput" placeholder="# Paste your buggy code here...
+def calculate_average(nums):
+    total = 0
+    for n in nums
+        total += n
+    return total / len(nums)"></textarea>
+
+    <div style="margin-top: 12px;">
+      <label for="errorMsg">Error message (optional)</label>
+      <input type="text" id="errorMsg" placeholder="e.g. SyntaxError: invalid syntax on line 4" />
+    </div>
+
+    <button class="debug-btn" id="debugBtn" onclick="debugCode()">
+      <i class="ti ti-player-play"></i> Debug my code
+    </button>
+  </div>
+
+  <div class="loading" id="loading">
+    <i class="ti ti-loader"></i>
+    <p>Analysing your code with AI...</p>
+  </div>
+
+  <div id="result">
+
+    <div class="result-card bugs-card">
+      <div class="card-head">
+        <i class="ti ti-alert-triangle card-icon bugs-card"></i>
+        <span class="card-head-title bugs-card">Bugs found</span>
+      </div>
+      <div id="bugsText" class="card-body"></div>
+    </div>
+
+    <div style="margin-bottom: 1rem;">
+      <div class="fix-header">
+        <div class="fix-title">
+          <i class="ti ti-check"></i>
+          Fixed code <span id="langBadge" class="lang-badge">Python</span>
+        </div>
+        <button class="copy-btn" onclick="copyFixed()">
+          <i class="ti ti-copy"></i> Copy
+        </button>
+      </div>
+      <pre id="fixedCode"></pre>
+    </div>
+
+    <div class="result-card explain-card">
+      <div class="card-head">
+        <i class="ti ti-bulb card-icon explain-card"></i>
+        <span class="card-head-title explain-card">Explanation</span>
+      </div>
+      <div id="explainText" class="card-body"></div>
+    </div>
+
+    <button class="reset-btn" onclick="resetForm()">
+      <i class="ti ti-refresh"></i> Debug another snippet
+    </button>
+  </div>
+
+  <div class="footer">
+    <span>AI code debugger — for university students</span>
+    <span>© 2024 <span class="owner">Hanish</span></span>
+  </div>
+
+</div>
+
+<script>
+  const ANTHROPIC_API_KEY = 'YOUR_API_KEY_HERE';
+
+  async function debugCode() {
+    const code = document.getElementById('codeInput').value.trim();
+    const lang = document.getElementById('lang').value;
+    const mode = document.getElementById('mode').value;
+    const errorMsg = document.getElementById('errorMsg').value.trim();
+
+    if (!code) { alert('Please paste some code first!'); return; }
+
+    document.getElementById('debugBtn').disabled = true;
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('result').style.display = 'none';
+
+    const modeInstructions = {
+      full: 'Find all bugs and provide the fixed code.',
+      explain: 'Explain all errors clearly without necessarily rewriting the full code.',
+      optimize: 'Fix all bugs and also optimize the code for better performance and readability.'
+    };
+
+    const prompt = `You are an expert ${lang} debugger for university students. Analyze the following ${lang} code and respond ONLY with a valid JSON object (no markdown, no backticks).
+
+${errorMsg ? `Error message: ${errorMsg}` : ''}
+
+Code:
+\`\`\`
+${code}
+\`\`\`
+
+${modeInstructions[mode]}
+
+Respond ONLY with this JSON structure:
+{
+  "bugs": "Clear numbered list of bugs found (or 'No bugs found' if clean)",
+  "fixed_code": "The complete corrected ${lang} code",
+  "explanation": "Simple explanation of what was wrong and why the fix works, friendly for students"
+}`;
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-allow-browser': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+      const text = data.content.map(i => i.text || '').join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      document.getElementById('bugsText').innerHTML = parsed.bugs.replace(/\n/g, '<br>');
+      document.getElementById('fixedCode').textContent = parsed.fixed_code;
+      document.getElementById('explainText').innerHTML = parsed.explanation.replace(/\n/g, '<br>');
+      document.getElementById('langBadge').textContent = lang;
+
+      document.getElementById('result').style.display = 'block';
+    } catch (err) {
+      alert('Something went wrong. Check your API key or try again.');
+      console.error(err);
+    } finally {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('debugBtn').disabled = false;
+    }
+  }
+
+  function copyFixed() {
+    const text = document.getElementById('fixedCode').textContent;
+    navigator.clipboard.writeText(text).then(() => alert('Fixed code copied!'));
+  }
+
+  function resetForm() {
+    document.getElementById('codeInput').value = '';
+    document.getElementById('errorMsg').value = '';
+    document.getElementById('result').style.display = 'none';
+  }
+</script>
+</body>
+</html>
